@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/hooks';
 
 const HEALTH_GOALS = [
@@ -77,6 +78,15 @@ export default function OnboardingPage() {
         <h1 className="text-3xl font-bold text-neutral-text">Kiss My Cache</h1>
         <p className="text-neutral-muted text-sm mt-1">Strava for Nutrition</p>
       </div>
+
+      {step === 1 && (
+        <div className="text-center mb-4">
+          <p className="text-neutral-muted text-sm">
+            Already have an account?{' '}
+            <Link href="/login" className="text-brand-primary font-semibold">Log in</Link>
+          </p>
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="px-6 mb-8">
