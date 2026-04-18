@@ -1,7 +1,6 @@
 'use client';
-
-import { useEffect, useState } from 'react';
-import { User, Meal } from './types';
+import { useEffect, useState, useCallback } from 'react';
+import { User, Meal, DailyPlanItem, GoalProgress, CommunityActivity, Group } from './types';
 import { dataStore } from './dataStore';
 
 export function useAuth() {
@@ -9,24 +8,30 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = dataStore.getCurrentUser();
-    setUser(currentUser);
+    setUser(dataStore.getCurrentUser());
     setLoading(false);
   }, []);
 
-  const login = (email: string, name: string, healthGoals: string[], dietaryPreference: string) => {
+  const login = (userData: Omit<User, 'id' | 'avatar' | 'createdAt'>) => {
+    const avatars = ['👨‍💻', '👩‍🍳', '🏃', '🧑‍⚕️', '👨‍🔬', '🧘', '🚴'];
     const user: User = {
+      ...userData,
       id: Math.random().toString(36).substr(2, 9),
-      email,
-      name,
-      healthGoals,
-      dietaryPreference,
-      avatar: ['👨‍💻', '👩‍🍳', '🏃', '🧑‍⚕️', '👨‍🔬'][Math.floor(Math.random() * 5)],
+      avatar: avatars[Math.floor(Math.random() * avatars.length)],
       createdAt: new Date(),
     };
     dataStore.setCurrentUser(user);
+    // generate plan on first login
+    dataStore.generateDailyPlan(user);
     setUser(user);
     return user;
+  };
+
+  const updateUser = (updates: Partial<User>) => {
+    if (!user) return;
+    const updated = { ...user, ...updates };
+    dataStore.setCurrentUser(updated);
+    setUser(updated);
   };
 
   const logout = () => {
@@ -34,7 +39,7 @@ export function useAuth() {
     setUser(null);
   };
 
-  return { user, loading, login, logout, isAuthenticated: !!user };
+  return { user, loading, login, logout, updateUser, isAuthenticated: !!user };
 }
 
 export function useMeals() {
@@ -42,41 +47,57 @@ export function useMeals() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize mock meals on first load
     dataStore.initializeMockMeals();
-    const currentMeals = dataStore.getMeals();
-    setMeals(currentMeals);
+    setMeals(dataStore.getMeals());
     setLoading(false);
   }, []);
 
-  const addMeal = (meal: Meal) => {
-    dataStore.addMeal(meal);
-    const updatedMeals = dataStore.getMeals();
-    setMeals(updatedMeals);
-  };
-
-  const likeMeal = (mealId: string) => {
-    dataStore.likeMeal(mealId);
-    const updatedMeals = dataStore.getMeals();
-    setMeals(updatedMeals);
-  };
-
-  const addReaction = (mealId: string, emoji: string) => {
-    dataStore.addReaction(mealId, emoji);
-    const updatedMeals = dataStore.getMeals();
-    setMeals(updatedMeals);
-  };
+  const addMeal = (meal: Meal) => { dataStore.addMeal(meal); setMeals(dataStore.getMeals()); };
+  const likeMeal = (mealId: string) => { dataStore.likeMeal(mealId); setMeals(dataStore.getMeals()); };
+  const addReaction = (mealId: string, emoji: string) => { dataStore.addReaction(mealId, emoji); setMeals(dataStore.getMeals()); };
 
   return { meals, loading, addMeal, likeMeal, addReaction };
 }
 
 export function useFriends() {
   const [friends, setFriends] = useState<User[]>([]);
+  useEffect(() => { setFriends(dataStore.getFriends()); }, []);
+  return { friends };
+}
+
+export function useDailyPlan(user: User | null) {
+  const [plan, setPlan] = useState<DailyPlanItem[]>([]);
+  const [goals, setGoals] = useState<GoalProgress[]>([]);
 
   useEffect(() => {
-    const currentFriends = dataStore.getFriends();
-    setFriends(currentFriends);
+    if (!user) return;
+    let p = dataStore.getDailyPlan();
+    if (p.length === 0) p = dataStore.generateDailyPlan(user);
+    setPlan(p);
+    setGoals(dataStore.getGoalProgress(user));
+  }, [user]);
+
+  const toggleItem = useCallback((id: string) => {
+    dataStore.togglePlanItem(id);
+    setPlan(dataStore.getDailyPlan());
   }, []);
 
-  return { friends };
+  const completedCount = plan.filter(i => i.completed).length;
+
+  return { plan, goals, toggleItem, completedCount, totalCount: plan.length };
+}
+
+export function useCommunity() {
+  const [feed, setFeed] = useState<CommunityActivity[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+
+  useEffect(() => {
+    setFeed(dataStore.getCommunityFeed());
+    setGroups(dataStore.getGroups());
+  }, []);
+
+  const likePost = (id: string) => { dataStore.likeCommunityPost(id); setFeed(dataStore.getCommunityFeed()); };
+  const toggleGroup = (id: string) => { dataStore.toggleJoinGroup(id); setGroups(dataStore.getGroups()); };
+
+  return { feed, groups, likePost, toggleGroup };
 }
