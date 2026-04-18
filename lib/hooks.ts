@@ -24,9 +24,20 @@ export function useAuth() {
       avatar: ['👨‍💻', '👩‍🍳', '🏃', '🧑‍⚕️', '👨‍🔬'][Math.floor(Math.random() * 5)],
       createdAt: new Date(),
     };
+    dataStore.registerUser(user);
     dataStore.setCurrentUser(user);
     setUser(user);
     return user;
+  };
+
+  const loginWithEmail = (email: string): { success: boolean; error?: string } => {
+    const existing = dataStore.findUserByEmail(email);
+    if (!existing) {
+      return { success: false, error: 'No account found with this email. Please sign up.' };
+    }
+    dataStore.setCurrentUser(existing);
+    setUser(existing);
+    return { success: true };
   };
 
   const logout = () => {
@@ -34,7 +45,7 @@ export function useAuth() {
     setUser(null);
   };
 
-  return { user, loading, login, logout, isAuthenticated: !!user };
+  return { user, loading, login, loginWithEmail, logout, isAuthenticated: !!user };
 }
 
 export function useMeals() {
