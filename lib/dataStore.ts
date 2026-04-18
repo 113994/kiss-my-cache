@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   MEALS: 'kiss-meals',
   FRIENDS: 'kiss-friends',
   USER_DATA: 'kiss-user-data',
+  USER_REGISTRY: 'kiss-user-registry',
 };
 
 export class DataStore {
@@ -34,6 +35,29 @@ export class DataStore {
   clearCurrentUser(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  }
+
+  getUserRegistry(): User[] {
+    if (typeof window === 'undefined') return [];
+    const data = localStorage.getItem(STORAGE_KEYS.USER_REGISTRY);
+    return data ? JSON.parse(data) : [];
+  }
+
+  registerUser(user: User): void {
+    if (typeof window === 'undefined') return;
+    const registry = this.getUserRegistry();
+    const idx = registry.findIndex(u => u.email.toLowerCase() === user.email.toLowerCase());
+    if (idx >= 0) {
+      registry[idx] = user;
+    } else {
+      registry.push(user);
+    }
+    localStorage.setItem(STORAGE_KEYS.USER_REGISTRY, JSON.stringify(registry));
+  }
+
+  findUserByEmail(email: string): User | null {
+    const registry = this.getUserRegistry();
+    return registry.find(u => u.email.toLowerCase() === email.toLowerCase()) ?? null;
   }
 
   // Meal management
